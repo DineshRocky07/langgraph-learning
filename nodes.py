@@ -12,7 +12,8 @@ def run_agent_reasoning_engine(state:MessagesState ) ->MessagesState :
     #state = dictionary
     """run the resoning agen"""
     response =llm.invoke(
-        [{"role":"system","content":"SYSTEM_MESSAGE"}, *state["messages"]]
+        [{"role":"system","content":SYSTEM_MESSAGE}, *state["messages"]]
+        
     )
 
     return {"messages":[response]}
