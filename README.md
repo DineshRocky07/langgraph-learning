@@ -1,3 +1,8 @@
+# 🦜🕸️ LangGraph ReAct Architecture: The Conceptual Guide
+
+This guide explains the theoretical and structural foundations of building a **ReAct (Reason + Act)** workflow using LangGraph.
+
+```mermaid
 flowchart TB
     %% STYLING
     classDef title fill:#000,stroke:#fff,color:#fff,font-size:20px,font-weight:bold,stroke-width:2px;
@@ -95,3 +100,4 @@ flowchart TB
     TITLE ~~~ S1
     S1 ~~~ S2
     S2 ~~~ S3
+```
