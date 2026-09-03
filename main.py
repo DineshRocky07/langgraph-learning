@@ -1,47 +1,66 @@
+from typing import TypedDict, Annotated
 from dotenv import load_dotenv
-
 load_dotenv()
-from langchain_core.messages import HumanMessage
-from langgraph.graph import MessagesState, StateGraph, START, END
 
-from nodes import run_agent_reasoning_engine,tool_node
+from langchain_core.messages import BaseMessage,HumanMessage
+from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 
-AGENT_BRAIN = "agent_brain"
-WORKER = "worker"
-LAST =-1
+from chains import generation_chain, reflection_chain
 
-flow = StateGraph(MessagesState)
-
-flow.add_node(AGENT_BRAIN,run_agent_reasoning_engine)
-flow.set_entry_point(AGENT_BRAIN)
-flow.add_node(WORKER,tool_node)
-
-def should_continue(state:dict) -> str:
-    if not state["messages"][LAST].tool_calls:
-       return END
-    return WORKER
-flow.add_conditional_edges(
-    AGENT_BRAIN,
-    should_continue,
-    {
-        END:END,
-        WORKER:WORKER,
-    },
-)
-flow.add_edge(WORKER,AGENT_BRAIN)
-
-app= flow.compile()
-app.get_graph().draw_mermaid_png(output_file_path="flown.png")
+#type dicnory, annotaed metadata, Basemessage all meessge, addmeesasage means applent new messages
+class Messagegraph(TypedDict):
+     history: Annotated[list[BaseMessage],add_messages]
 
 
-if __name__=="__main__":
-    print("react langgraph agent")
 
-    res= app.invoke(
-        {
-        "messages":[
-            HumanMessage(content="what is the weather in chennai? List it and then trible it ")
+REFLECT = "reflect"
+GENERATE = "generate"
+
+def generation_node(state:Messagegraph):
+    return {"history": [generation_chain.invoke({"history": state["history"]})]}
+"""Get old history
+      ↓
+Give it to generation_chain
+      ↓
+AI creates new response
+      ↓
+Put response in a list
+      ↓
+Return {"history": [new response]}"""
+
+def reflection_node(state:Messagegraph):
+    res= reflection_chain.invoke({"history": state["history"]})
+    print("reflection_node debug",res.content)
+    return {"history": [HumanMessage(content=res.content)]}
+
+
+#scheman stuture data 
+builder = StateGraph(state_schema=Messagegraph)
+builder.add_node(GENERATE,generation_node)
+builder.add_node(REFLECT,reflection_node)
+builder.set_entry_point(GENERATE)
+
+def should_conitue(state:Messagegraph):
+    if len(state["history"]) > 5:
+        return END
+    return REFLECT
+
+builder.add_conditional_edges(GENERATE,should_conitue)
+builder.add_edge(REFLECT,GENERATE)
+
+graph = builder.compile()
+graph.get_graph().draw_mermaid_png(output_file_path="graph.png")
+# graph.get_graph().print_ascii()
+
+if __name__ == "__main__":
+    print("Hello LangGraph!")
+    inputs={
+        "history":
+        [
+          HumanMessage(content="Write a tweet about the new features of LangGraph, make it viral and engaging.")
         ]
-        }
-    )
-    print(res["messages"][LAST].content)
+    }
+
+    response = graph.invoke(inputs)
+    print(response)
