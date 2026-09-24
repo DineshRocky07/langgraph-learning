@@ -1,6 +1,6 @@
 ﻿# 🔁 LangGraph Reflection Agent
 
-An agentic workflow built with **LangGraph**, **LangChain**, and **Google Gemini 2.5 Flash** that implements the **Reflection Pattern** — where an AI generator drafts content, an influencer critic agent provides targeted feedback, and the generator iteratively refines the post until it reaches peak virality.
+An agentic workflow built with **LangGraph**, **LangChain**, and **Google Gemini** that implements the **Reflection Pattern** — where an AI generator drafts content, an influencer critic agent provides targeted feedback, and the generator iteratively refines the post until it reaches peak virality.
 
 ---
 
@@ -55,41 +55,67 @@ langgraph_reflection_agent/
 
 ---
 
-## 🧠 Core Components Explained
+## 📚 Study Notes & Quick Reference (For Future Learning)
 
-### 1. `chains.py` — Prompt Engineering & LCEL
-- **`ChatPromptTemplate.from_messages`**: Structures the conversation history with clear system instructions and contextual dialog.
-- **`MessagesPlaceholder(variable_name="history")`**: Injects dynamic message history into the prompt at runtime so both agents remember prior drafts and critiques.
-- **`ChatGoogleGenerativeAI`**: Leverages `gemini-2.5-flash` for high-speed, cost-effective inference.
-- **LangChain Expression Language (LCEL)**:
+### 1. Setup & Initialization
+```bash
+poetry init
+```
+
+### 2. `chains.py` Breakdown
+- **`ChatPromptTemplate`** => The prompt instructions
+- **`MessagesPlaceholder`** => Empty space / placeholder to save and inject chat history
+- **`from_messages`** => Structured dialog format (what the system/AI gives and what the human gives)
+- **Model**: `llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")` (or `gemini-1.5-flash`)
+- **Chains**:
   ```python
   generation_chain = generation_prompt | llm
   reflection_chain = reflection_prompt | llm
   ```
 
-### 2. `main.py` — Graph State & Control Flow
-- **`TypedDict` & `Annotated`**: Defines typed graph state.
-- **`add_messages` Reducer**: Tells LangGraph to **append** new messages to `history` instead of overwriting the previous state.
+### 3. `main.py` Breakdown
+- **`from typing import TypedDict, Annotated`**:
+  - `TypedDict` -> Gives dictionary structure
+  - `Annotated` -> Attaches metadata to types
+- **`BaseMessage`**: The common parent / general message type in LangChain (`HumanMessage`, `AIMessage`, etc.)
+- **`add_messages`**: Reducer function that appends new messages to state instead of overwriting!
+  > **This is very important in LangGraph:** It adds new messages to the existing messages list.
   ```python
   class Messagegraph(TypedDict):
       history: Annotated[list[BaseMessage], add_messages]
   ```
-- **Conditional Routing**:
-  ```python
-  def should_conitue(state: Messagegraph):
-      if len(state["history"]) > 5:
-          return END
-      return REFLECT
 
-  builder.add_conditional_edges(
-      GENERATE,
-      should_conitue,
-      {
-          REFLECT: REFLECT,
-          END: END
-      }
-  )
-  ```
+### 4. 🧠 FYI: Agentic AI Mental Model (Wiki)
+
+```text
+LLM
+ ↓
+The brain
+
+Prompt
+ ↓
+Instructions for the brain
+
+Chain
+ ↓
+Prompt + LLM connected together
+
+Tool
+ ↓
+Something the AI can use/do
+
+Agent
+ ↓
+AI decides which tools/actions to use
+
+LangGraph
+ ↓
+Controls a complex workflow/loop
+
+Reflection
+ ↓
+Generate → Review → Improve
+```
 
 ---
 
@@ -121,19 +147,6 @@ GOOGLE_API_KEY="your-google-gemini-api-key"
 ```bash
 poetry run python main.py
 ```
-
----
-
-## 💡 Quick Reference: Agentic AI Concepts
-
-| Term | Definition | Role in this Project |
-|---|---|---|
-| **LLM** | The foundational reasoning brain | `gemini-2.5-flash` powering generation & critique |
-| **Prompt** | System instructions and persona definition | Viral tech writer persona & strict critique rubric |
-| **Chain** | Connected Prompt + Model pipeline | `generation_prompt \| llm` |
-| **StateGraph** | Orchestrator of cyclic, stateful workflows | Controls `generate ⇄ reflect` iteration loops |
-| **Reducer (`add_messages`)** | State accumulator function | Automatically appends iterations without losing chat history |
-| **Reflection** | Self-correction / feedback loop | Iteratively transforms average output into high-performing content |
 
 ---
 
