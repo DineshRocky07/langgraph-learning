@@ -46,7 +46,13 @@ def should_conitue(state:Messagegraph):
         return END
     return REFLECT
 
-builder.add_conditional_edges(GENERATE,should_conitue)
+builder.add_conditional_edges(
+            GENERATE,
+            should_conitue,
+            {
+                REFLECT:REFLECT,
+                END:END
+            })
 builder.add_edge(REFLECT,GENERATE)
 
 graph = builder.compile()
